@@ -142,16 +142,7 @@ export function PowerCloneModal({
     setSelectedPlans(newSelected)
   }
 
-  const allPlansSelected = paymentPlans.length > 0 && selectedPlans.size === paymentPlans.length
   const somePlansSelected = selectedPlans.size > 0 && selectedPlans.size < paymentPlans.length
-
-  const toggleSelectAllPlans = () => {
-    if (allPlansSelected) {
-      setSelectedPlans(new Set())
-    } else {
-      setSelectedPlans(new Set(paymentPlans.map((plan) => plan.id)))
-    }
-  }
 
 
 
@@ -169,7 +160,7 @@ export function PowerCloneModal({
 
         {/* Step Indicator */}
         <div className="flex items-center justify-center gap-2 py-4">
-          {[1, 2, 3].map((s) => (
+          {[1, 2].map((s) => (
             <React.Fragment key={s}>
               <div className="flex items-center gap-2">
                 <div
@@ -190,10 +181,10 @@ export function PowerCloneModal({
                     s === step ? "text-foreground" : "text-muted-foreground"
                   )}
                 >
-                  {s === 1 ? "Basic Info" : s === 2 ? "Options" : "Payment Plans"}
+                  {s === 1 ? "Basic Info" : "Options"}
                 </span>
               </div>
-              {s < 3 && (
+              {s < 2 && (
                 <div
                   className={cn(
                     "w-12 h-0.5 mx-2",
@@ -510,7 +501,7 @@ export function PowerCloneModal({
                   </AccordionItem>
 
                   {/* Waivers */}
-                  <AccordionItem value="waivers" className="border rounded-lg px-4 mb-3 border-b">
+                  <AccordionItem value="waivers" className="border rounded-lg px-4 mb-3">
                     <div className="flex items-center gap-3">
                       <Checkbox
                         checked={options.includeWaivers}
@@ -535,86 +526,90 @@ export function PowerCloneModal({
                       </div>
                     </AccordionContent>
                   </AccordionItem>
+
+                  {/* Payment Plans */}
+                  <AccordionItem value="paymentPlans" className="border rounded-lg px-4 mb-3 border-b">
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        checked={selectedPlans.size > 0}
+                        ref={(el) => {
+                          if (el) {
+                            (el as HTMLButtonElement & { indeterminate: boolean }).indeterminate = somePlansSelected
+                          }
+                        }}
+                        onCheckedChange={() => {
+                          if (selectedPlans.size > 0) {
+                            setSelectedPlans(new Set())
+                          } else {
+                            setSelectedPlans(new Set(paymentPlans.map((plan) => plan.id)))
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                      />
+                      <AccordionTrigger className="flex-1 hover:no-underline">
+                        <div>
+                          <span className="font-medium text-foreground">Payment Plans</span>
+                          <p className="text-xs text-muted-foreground font-normal">
+                            {selectedPlans.size === 0
+                              ? `Select payment plans to copy (${paymentPlans.length} available)`
+                              : `${selectedPlans.size} of ${paymentPlans.length} payment plan${selectedPlans.size === 1 ? "" : "s"} selected`}
+                          </p>
+                        </div>
+                      </AccordionTrigger>
+                    </div>
+                    <AccordionContent className="pl-9">
+                      <div className="space-y-3 pt-2 border-t border-border">
+                        {paymentPlans.length === 0 ? (
+                          <div className="text-sm text-muted-foreground py-2">
+                            No payment plans available for this program.
+                          </div>
+                        ) : (
+                          <>
+                            {/* Table Header */}
+                            <div className="grid grid-cols-[auto_1fr_80px_80px_80px] gap-3 px-2 py-2 text-xs font-medium text-muted-foreground border-b border-border">
+                              <div className="w-5"></div>
+                              <div>Name</div>
+                              <div className="text-center"># Payments</div>
+                              <div className="text-center">Interval</div>
+                              <div className="text-center">Count</div>
+                            </div>
+
+                            <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                              {paymentPlans.map((plan) => (
+                                <div
+                                  key={plan.id}
+                                  className={cn(
+                                    "grid grid-cols-[auto_1fr_80px_80px_80px] gap-3 items-center px-2 py-2 rounded-md border transition-colors cursor-pointer",
+                                    selectedPlans.has(plan.id)
+                                      ? "border-primary/50 bg-primary/5 border-l-4 border-l-primary"
+                                      : "border-border hover:bg-muted/30"
+                                  )}
+                                  onClick={() => togglePlan(plan.id)}
+                                >
+                                  <Checkbox
+                                    checked={selectedPlans.has(plan.id)}
+                                    onCheckedChange={() => togglePlan(plan.id)}
+                                    className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                  />
+                                  <div className="text-sm text-foreground">{plan.name}</div>
+                                  <div className="text-sm text-foreground text-center">{plan.payments}</div>
+                                  <div className="text-sm text-foreground text-center">{plan.intervalType || "-"}</div>
+                                  <div className="text-sm text-foreground text-center">{plan.intervalCount}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
                 </Accordion>
               </div>
             </ScrollArea>
           )}
 
-          {/* Step 3: Payment Plans */}
-          {step === 3 && (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Select the payment plans you want to include in the cloned program.
-              </p>
 
-              {/* Select All Header */}
-              <div className="flex items-center gap-3 pb-3 mb-3 border-b border-border">
-                <Checkbox
-                  checked={allPlansSelected}
-                  ref={(el) => {
-                    if (el) {
-                      (el as HTMLButtonElement & { indeterminate: boolean }).indeterminate = somePlansSelected
-                    }
-                  }}
-                  onCheckedChange={toggleSelectAllPlans}
-                  className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                />
-                <span className="font-medium text-foreground">Select All</span>
-                <span className="text-sm text-muted-foreground">
-                  ({paymentPlans.length} payment plan{paymentPlans.length === 1 ? "" : "s"})
-                </span>
-              </div>
-
-              <ScrollArea className="h-[320px] pr-4">
-                {paymentPlans.length === 0 ? (
-                  <div className="flex items-center justify-center h-32 text-muted-foreground">
-                    No payment plans available for this program.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {/* Table Header */}
-                    <div className="grid grid-cols-[auto_1fr_100px_100px_100px] gap-4 px-4 py-2 text-sm font-medium text-muted-foreground border-b border-border">
-                      <div className="w-6"></div>
-                      <div>Name</div>
-                      <div className="text-center"># Payments</div>
-                      <div className="text-center">Interval Type</div>
-                      <div className="text-center">Interval Count</div>
-                    </div>
-
-                    {paymentPlans.map((plan) => (
-                      <div
-                        key={plan.id}
-                        className={cn(
-                          "grid grid-cols-[auto_1fr_100px_100px_100px] gap-4 items-center px-4 py-3 rounded-lg border transition-colors cursor-pointer",
-                          selectedPlans.has(plan.id)
-                            ? "border-primary/50 bg-primary/5 border-l-4 border-l-primary"
-                            : "border-border hover:bg-muted/30"
-                        )}
-                        onClick={() => togglePlan(plan.id)}
-                      >
-                        <Checkbox
-                          checked={selectedPlans.has(plan.id)}
-                          onCheckedChange={() => togglePlan(plan.id)}
-                          className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                        />
-                        <div className="text-sm text-foreground">{plan.name}</div>
-                        <div className="text-sm text-foreground text-center">{plan.payments}</div>
-                        <div className="text-sm text-foreground text-center">{plan.intervalType || "-"}</div>
-                        <div className="text-sm text-foreground text-center">{plan.intervalCount}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
-
-              {/* Info Banner */}
-              <div className="bg-[hsl(var(--info))] text-[hsl(var(--info-foreground))] rounded-md p-3 text-sm">
-                {selectedPlans.size === 0
-                  ? "No payment plans selected. The cloned program will not have payment plan options."
-                  : `${selectedPlans.size} payment plan${selectedPlans.size === 1 ? "" : "s"} will be copied to the new program.`}
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="flex items-center justify-between pt-4 border-t border-border relative z-50 bg-background">
@@ -641,7 +636,7 @@ export function PowerCloneModal({
             >
               Cancel
             </Button>
-            {step < 3 ? (
+            {step < 2 ? (
               <Button
                 type="button"
                 onClick={() => {
