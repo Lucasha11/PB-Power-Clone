@@ -14,13 +14,18 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Check } from "lucide-react"
+import { Check, Info } from "lucide-react"
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 export interface PaymentPlan {
@@ -65,6 +70,47 @@ interface PowerCloneModalProps {
 
 const categories = ["Basketball Camp", "Soccer Camp", "Swimming Camp", "Tennis Camp", "General Sports"]
 
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+type Recurrence = "never" | "daily" | "weekly" | "monthly"
+
+function computeEndDate(startStr: string, recurrence: Recurrence, selectedDays: Set<number>): string {
+  const dateMatch = startStr.match(/^(\d{4}-\d{2}-\d{2})/)
+  if (!dateMatch) return ""
+  const start = new Date(dateMatch[1])
+  if (isNaN(start.getTime())) return ""
+
+  const timeMatch = startStr.match(/(\d{1,2}:\d{2} (?:AM|PM))$/)
+  const time = timeMatch ? timeMatch[1] : "12:00 AM"
+
+  let end: Date
+
+  if (recurrence === "daily") {
+    end = new Date(start)
+    end.setDate(end.getDate() + 30)
+  } else if (recurrence === "weekly") {
+    end = new Date(start)
+    end.setDate(end.getDate() + 56) // 8 weeks out
+    // Walk back to find the last occurrence of a selected day
+    if (selectedDays.size > 0) {
+      for (let i = 0; i < 7; i++) {
+        if (selectedDays.has(end.getDay())) break
+        end.setDate(end.getDate() - 1)
+      }
+    }
+  } else if (recurrence === "monthly") {
+    end = new Date(start)
+    end.setMonth(end.getMonth() + 3)
+  } else {
+    return ""
+  }
+
+  const yyyy = end.getFullYear()
+  const mm = String(end.getMonth() + 1).padStart(2, "0")
+  const dd = String(end.getDate()).padStart(2, "0")
+  return `${yyyy}-${mm}-${dd} ${time}`
+}
+
 export function PowerCloneModal({
   open,
   onOpenChange,
@@ -91,6 +137,24 @@ export function PowerCloneModal({
     includeWaivers: true,
   })
   const [selectedPlans, setSelectedPlans] = React.useState<Set<string>>(new Set())
+  const [recurrence, setRecurrence] = React.useState<Recurrence>("never")
+  const [selectedDays, setSelectedDays] = React.useState<Set<number>>(new Set())
+
+  const toggleDay = (day: number) => {
+    setSelectedDays((prev) => {
+      const next = new Set(prev)
+      if (next.has(day)) next.delete(day)
+      else next.add(day)
+      return next
+    })
+  }
+
+  // Recompute end date whenever recurrence, selected days, or start time changes
+  React.useEffect(() => {
+    const computed = computeEndDate(programData.startTime, recurrence, selectedDays)
+    setProgramData((prev) => ({ ...prev, endTime: computed }))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recurrence, selectedDays, programData.startTime])
 
   const handleInputChange = (field: keyof ProgramData, value: string) => {
     setProgramData((prev) => ({ ...prev, [field]: value }))
@@ -127,6 +191,8 @@ export function PowerCloneModal({
       })
 
       setSelectedPlans(new Set())
+      setRecurrence("never")
+      setSelectedDays(new Set())
     }
   }
   const togglePlan = (planId: string) => {
@@ -210,9 +276,19 @@ export function PowerCloneModal({
                 {/* Title and Price Row */}
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="title" className="text-foreground">
-                      <span className="text-destructive">*</span> Title
-                    </Label>
+                    <div className="flex items-center gap-1.5">
+                      <Label htmlFor="title" className="text-foreground">
+                        <span className="text-destructive">*</span> Title
+                      </Label>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="size-3.5 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-[220px] text-center">
+                          Price, capacity, location, and title will remain the same as the original program unless changed here.
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
                     <Input
                       id="title"
                       value={programData.title}
@@ -269,23 +345,76 @@ export function PowerCloneModal({
                   </div>
                 </div>
 
-                {/* End Time and Registration Start Date Row */}
+                {/* Recurs and End Time Row */}
                 <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="recurrence" className="text-foreground">
+                      Recurs
+                    </Label>
+                    <select
+                      id="recurrence"
+                      value={recurrence}
+                      onChange={(e) => setRecurrence(e.target.value as Recurrence)}
+                      className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background"
+                    >
+                      <option value="never">Never</option>
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                    </select>
+                    {recurrence === "weekly" && (
+                      <p className="text-xs text-primary">
+                        Remember to select an end date for the sessions.
+                      </p>
+                    )}
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="endTime" className="text-foreground">
                       End time
+                      {recurrence !== "never" && (
+                        <span className="ml-1.5 text-xs font-normal text-primary">(auto-computed)</span>
+                      )}
                     </Label>
                     <Input
                       id="endTime"
                       value={programData.endTime}
                       onChange={(e) => handleInputChange("endTime", e.target.value)}
                       placeholder="YYYY-MM-DD HH:MM AM/PM"
-                      className="bg-background"
+                      className={cn("bg-background", recurrence !== "never" && "text-primary")}
+                      readOnly={recurrence !== "never"}
                     />
                     <p className="text-xs text-muted-foreground">
                       Date and Time this camp/clinic/class is expected to end
                     </p>
                   </div>
+                </div>
+
+                {/* Weekly Day Picker */}
+                {recurrence === "weekly" && (
+                  <div className="space-y-2">
+                    <Label className="text-foreground">Weekly Recurrence</Label>
+                    <div className="flex gap-2">
+                      {DAYS.map((day, i) => (
+                        <button
+                          key={day}
+                          type="button"
+                          onClick={() => toggleDay(i)}
+                          className={cn(
+                            "flex-1 py-2 text-sm rounded-md border transition-colors",
+                            selectedDays.has(i)
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background text-foreground border-input hover:bg-muted/50"
+                          )}
+                        >
+                          {day}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Registration Start Date and Deadline Row */}
+                <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="registrationStartDate" className="text-foreground">
                       Registration start date
@@ -301,10 +430,6 @@ export function PowerCloneModal({
                       If left blank, registration will be open immediately
                     </p>
                   </div>
-                </div>
-
-                {/* Registration Deadline Row */}
-                <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="registrationDeadline" className="text-foreground">
                       Registration deadline
