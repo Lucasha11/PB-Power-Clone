@@ -45,7 +45,6 @@ export interface ProgramData {
 
 export interface CloneOptions {
   includeSessions: boolean
-  includeSessionBlocks: boolean
   includeWaitlistSettings: boolean
   includeCustomFields: boolean
   includeNotifications: boolean
@@ -86,7 +85,6 @@ export function PowerCloneModal({
   })
   const [options, setOptions] = React.useState<CloneOptions>({
     includeSessions: true,
-    includeSessionBlocks: true,
     includeWaitlistSettings: true,
     includeCustomFields: true,
     includeNotifications: true,
@@ -122,7 +120,6 @@ export function PowerCloneModal({
 
       setOptions({
         includeSessions: true,
-        includeSessionBlocks: true,
         includeWaitlistSettings: true,
         includeCustomFields: true,
         includeNotifications: true,
@@ -341,7 +338,6 @@ export function PowerCloneModal({
                       const allChecked = Object.values(options).every(Boolean)
                       setOptions({
                         includeSessions: !allChecked,
-                        includeSessionBlocks: !allChecked,
                         includeWaitlistSettings: !allChecked,
                         includeCustomFields: !allChecked,
                         includeNotifications: !allChecked,
@@ -382,45 +378,6 @@ export function PowerCloneModal({
                               Summer Camp Jul {String(i + 1).padStart(2, "0")}, 9:00 AM
                             </div>
                           ))}
-                        </div>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  {/* Session Blocks Accordion */}
-                  <AccordionItem value="sessionBlocks" className="border rounded-lg px-4 mb-3">
-                    <div className="flex items-center gap-3">
-                      <Checkbox
-                        checked={options.includeSessionBlocks}
-                        onCheckedChange={() => handleOptionToggle("includeSessionBlocks")}
-                        onClick={(e) => e.stopPropagation()}
-                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                      />
-                      <AccordionTrigger className="flex-1 hover:no-underline">
-                        <div>
-                          <span className="font-medium text-foreground">Session Blocks</span>
-                          <p className="text-xs text-muted-foreground font-normal">
-                            Copy session block groupings and pricing
-                          </p>
-                        </div>
-                      </AccordionTrigger>
-                    </div>
-                    <AccordionContent className="pl-9">
-                      <div className="space-y-2 pt-2 border-t border-border">
-                        <p className="text-xs text-muted-foreground mb-2">3 session blocks available:</p>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between bg-muted/30 px-3 py-2 rounded border-l-4 border-l-primary">
-                            <span className="text-sm font-medium">Test Session</span>
-                            <span className="text-xs text-muted-foreground">1 session - $20.00</span>
-                          </div>
-                          <div className="flex items-center justify-between bg-muted/30 px-3 py-2 rounded border-l-4 border-l-primary">
-                            <span className="text-sm font-medium">Week 1</span>
-                            <span className="text-xs text-muted-foreground">5 sessions - $80.00</span>
-                          </div>
-                          <div className="flex items-center justify-between bg-muted/30 px-3 py-2 rounded border-l-4 border-l-primary">
-                            <span className="text-sm font-medium">Week 2</span>
-                            <span className="text-xs text-muted-foreground">5 sessions - $80.00</span>
-                          </div>
                         </div>
                       </div>
                     </AccordionContent>
